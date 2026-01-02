@@ -13,52 +13,41 @@ CSV_HEADER = [
     "PE_OI"
 ]
 
-# ---------------- ATM ---------------- #
-
 def calculate_atm(spot, strike_step):
     return int(round(float(spot) / strike_step) * strike_step)
 
-# ---------------- ATM ROW EXTRACTION ---------------- #
-
-def extract_atm_row(option_chain, atm_strike):
+def extract_valid_iv_row(option_chain, atm):
     """
-    Robust ATM extractor:
-    - Normalizes all strikes to int
-    - Handles string / float mismatches
-    - Falls back to nearest strike if exact match fails
+    Returns the nearest strike to ATM
+    where BOTH CE_IV and PE_IV exist.
     """
 
-    atm_strike = int(atm_strike)
-
-    strike_map = {}
-    strikes = []
+    candidates = []
 
     for row in option_chain:
         try:
             strike = int(float(row["strike"]))
+            ce_iv = row.get("ce_iv")
+            pe_iv = row.get("pe_iv")
         except Exception:
             continue
 
-        strike_map[strike] = {
-            "ce_iv": float(row["ce_iv"]),
-            "pe_iv": float(row["pe_iv"]),
+        if ce_iv is None or pe_iv is None:
+            continue
+
+        candidates.append({
+            "strike": strike,
+            "ce_iv": float(ce_iv),
+            "pe_iv": float(pe_iv),
             "ce_oi": int(row.get("ce_oi", 0)),
-            "pe_oi": int(row.get("pe_oi", 0)),
-        }
-        strikes.append(strike)
+            "pe_oi": int(row.get("pe_oi", 0))
+        })
 
-    # ---- Exact match ----
-    if atm_strike in strike_map:
-        return strike_map[atm_strike]
+    if not candidates:
+        return None
 
-    # ---- Nearest fallback (MANDATORY for NSE) ----
-    if strikes:
-        nearest = min(strikes, key=lambda x: abs(x - atm_strike))
-        return strike_map[nearest]
-
-    return None
-
-# ---------------- CSV APPEND ---------------- #
+    # Nearest valid strike
+    return min(candidates, key=lambda x: abs(x["strike"] - atm))
 
 def append_row_to_csv_text(csv_text, row):
     input_io = io.StringIO(csv_text.strip())
@@ -67,13 +56,11 @@ def append_row_to_csv_text(csv_text, row):
     output = io.StringIO()
     writer = csv.writer(output)
 
-    # Write header if missing
     if not reader or reader[0] != CSV_HEADER:
         writer.writerow(CSV_HEADER)
         writer.writerow(row)
         return output.getvalue()
 
-    # Write existing data
     for r in reader:
         writer.writerow(r)
 
