@@ -25,21 +25,23 @@ def extract_atm_row(option_chain, atm_strike):
 
 
 def append_row_to_csv_text(csv_text, row):
-    input_io = io.StringIO(csv_text)
+    input_io = io.StringIO(csv_text.strip())
     reader = list(csv.reader(input_io))
-
-    # If file is empty
-    if not reader:
-        reader = [CSV_HEADER]
-
-    header = reader[0]
-    rows = reader[1:]
-
-    rows.append(row)
 
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(header)
-    writer.writerows(rows)
+
+    # Case 1: Empty file OR file without header
+    if not reader or reader[0] != CSV_HEADER:
+        writer.writerow(CSV_HEADER)
+        writer.writerow(row)
+        return output.getvalue()
+
+    # Case 2: Proper file exists
+    writer.writerow(reader[0])      # header
+    for r in reader[1:]:
+        writer.writerow(r)
+
+    writer.writerow(row)
 
     return output.getvalue()
