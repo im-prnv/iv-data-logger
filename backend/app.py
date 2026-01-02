@@ -12,9 +12,6 @@ from github_utils import (
     get_csv_from_github,
     commit_csv_to_github
 )
-@app.route("/health", methods=["GET"])
-def health():
-    return jsonify({"status": "ok"})
 
 app = Flask(__name__)
 CORS(app)
@@ -32,58 +29,67 @@ GITHUB_REPO = os.environ.get("GITHUB_REPO")
 if not GITHUB_TOKEN or not GITHUB_REPO:
     raise RuntimeError("GitHub environment variables not set")
 
-# ---------------- ROUTES ---------------- #
+# ---------------- HEALTH CHECK ---------------- #
+
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"}), 200
+
+# ---------------- MAIN API ---------------- #
 
 @app.route("/process-option-chain", methods=["POST"])
 def process_option_chain():
-    data = request.get_json()
-
-    # ---- Basic validation ----
-    required_fields = ["symbol", "date", "spot", "strike_step", "option_chain"]
-    for field in required_fields:
-        if field not in data:
-            return jsonify({"error": f"Missing field: {field}"}), 400
-
-    symbol = data["symbol"].upper()
-    date = data["date"]
-    spot = float(data["spot"])
-    strike_step = int(data["strike_step"])
-    option_chain = data["option_chain"]
-
-    if symbol not in SYMBOL_FILE_MAP:
-        return jsonify({"error": "Unsupported symbol"}), 400
-
-    # ---- ATM calculation ----
-    atm = calculate_atm(spot, strike_step)
-
-    atm_row = extract_atm_row(option_chain, atm)
-    if not atm_row:
-        return jsonify({"error": "ATM strike not found in option chain"}), 400
-
-    ce_iv = float(atm_row["ce_iv"])
-    pe_iv = float(atm_row["pe_iv"])
-    ce_oi = int(atm_row["ce_oi"])
-    pe_oi = int(atm_row["pe_oi"])
-
-    avg_iv = round((ce_iv + pe_iv) / 2, 2)
-
-    # ---- Prepare CSV row ----
-    row = [
-        date,
-        symbol,
-        spot,
-        atm,
-        ce_iv,
-        pe_iv,
-        avg_iv,
-        ce_oi,
-        pe_oi
-    ]
-
-    # ---- GitHub CSV update ----
-    csv_path = f"data/{SYMBOL_FILE_MAP[symbol]}"
-
     try:
+        data = request.get_json()
+
+        # ---- Validation ----
+        required_fields = ["symbol", "date", "spot", "strike_step", "option_chain"]
+        for field in required_fields:
+            if field not in data:
+                return jsonify({"error": f"Missing field: {field}"}), 400
+
+        symbol = data["symbol"].upper()
+        date = data["date"]
+        spot = float(data["spot"])
+        strike_step = int(data["strike_step"])
+        option_chain = data["option_chain"]
+
+        if symbol not in SYMBOL_FILE_MAP:
+            return jsonify({"error": "Unsupported symbol"}), 400
+
+        # ---- ATM logic ----
+        atm = calculate_atm(spot, strike_step)
+
+        atm_row = extract_atm_row(option_chain, atm)
+        if not atm_row:
+            return jsonify({
+                "error": "ATM strike not found in option chain",
+                "atm": atm
+            }), 400
+
+        ce_iv = float(atm_row["ce_iv"])
+        pe_iv = float(atm_row["pe_iv"])
+        ce_oi = int(atm_row["ce_oi"])
+        pe_oi = int(atm_row["pe_oi"])
+
+        avg_iv = round((ce_iv + pe_iv) / 2, 2)
+
+        # ---- CSV row ----
+        row = [
+            date,
+            symbol,
+            spot,
+            atm,
+            ce_iv,
+            pe_iv,
+            avg_iv,
+            ce_oi,
+            pe_oi
+        ]
+
+        # ---- GitHub CSV update ----
+        csv_path = f"data/{SYMBOL_FILE_MAP[symbol]}"
+
         csv_text, sha = get_csv_from_github(
             GITHUB_REPO,
             csv_path,
@@ -101,27 +107,28 @@ def process_option_chain():
             f"Add IV data for {symbol} {date}"
         )
 
+        return jsonify({
+            "status": "success",
+            "message": "IV data saved and committed to GitHub",
+            "data": {
+                "date": date,
+                "symbol": symbol,
+                "spot": spot,
+                "atm": atm,
+                "ce_iv": ce_iv,
+                "pe_iv": pe_iv,
+                "avg_iv": avg_iv
+            }
+        })
+
     except Exception as e:
         return jsonify({
             "status": "error",
             "message": str(e)
         }), 500
 
-    # ---- Success ----
-    return jsonify({
-        "status": "success",
-        "message": "IV data saved and committed to GitHub",
-        "data": {
-            "date": date,
-            "symbol": symbol,
-            "spot": spot,
-            "atm": atm,
-            "avg_iv": avg_iv
-        }
-    })
 
-
-# ---------------- MAIN ---------------- #
+# ---------------- ENTRY ---------------- #
 
 if __name__ == "__main__":
     app.run(debug=True)
