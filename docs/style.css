@@ -1,0 +1,41 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #0f172a;
+    color: #e5e7eb;
+}
+
+.container {
+    max-width: 420px;
+    margin: 50px auto;
+    padding: 20px;
+    background: #020617;
+    border-radius: 8px;
+}
+
+label {
+    display: block;
+    margin-top: 12px;
+}
+
+input, select, button {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border-radius: 4px;
+    border: none;
+}
+
+button {
+    margin-top: 18px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+#status {
+    margin-top: 15px;
+}
