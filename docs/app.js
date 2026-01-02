@@ -41,14 +41,14 @@ window.onload = startServerWatcher;
 
 function processCSV() {
     if (!serverActive) {
-        alert("Backend waking up. Wait.");
+        alert("Backend waking up. Please wait.");
         return;
     }
 
     const file = document.getElementById("csvFile").files[0];
     const symbol = document.getElementById("symbol").value;
     const date = document.getElementById("date").value;
-    const spot = document.getElementById("spot").value;
+    const spot = Number(document.getElementById("spot").value);
 
     if (!file || !date || !spot) {
         alert("Fill all fields");
@@ -56,12 +56,13 @@ function processCSV() {
     }
 
     const strikeStep = symbol === "BANKNIFTY" ? 100 : 50;
+    const atm = Math.round(spot / strikeStep) * strikeStep;
 
     Papa.parse(file, {
         header: false,
         skipEmptyLines: true,
         complete: res => {
-            const parsed = parseNSEOptionChain(res.data);
+            const parsed = parseNSEOptionChain(res.data, atm, strikeStep);
             console.log("OPTION CHAIN LENGTH:", parsed.length);
             console.log("FIRST 10 STRIKES:", parsed.slice(0, 10).map(r => r.strike));
             sendToBackend(symbol, date, spot, strikeStep, parsed);
@@ -69,34 +70,55 @@ function processCSV() {
     });
 }
 
-// ---------------- NSE PARSER (CORRECT) ----------------
+// ---------------- NSE PARSER (FINAL & GUARANTEED) ----------------
 
-function parseNSEOptionChain(rows) {
+function parseNSEOptionChain(rows, atm, step) {
+    if (!rows || !rows.length) return [];
+
+    let strikeColIndex = null;
+
+    // -------- PASS 1: FIND STRIKE COLUMN --------
+    for (const row of rows) {
+        if (!Array.isArray(row)) continue;
+
+        for (let i = 0; i < row.length; i++) {
+            const val = Number(row[i]);
+            if (
+                !isNaN(val) &&
+                (val === atm || val === atm - step || val === atm + step)
+            ) {
+                strikeColIndex = i;
+                console.log("DETECTED STRIKE COLUMN INDEX:", strikeColIndex);
+                break;
+            }
+        }
+        if (strikeColIndex !== null) break;
+    }
+
+    if (strikeColIndex === null) {
+        console.error("❌ STRIKE COLUMN NOT FOUND");
+        return [];
+    }
+
+    // -------- PASS 2: PARSE DATA --------
     const parsed = [];
 
     for (const row of rows) {
         if (!Array.isArray(row)) continue;
 
-        const mid = Math.floor(row.length / 2);
-        const strike = Number(row[mid]);
+        const strike = Number(row[strikeColIndex]);
+        if (isNaN(strike)) continue;
 
-        // REAL DATA ROW IDENTIFIER:
-        // middle cell must be numeric & divisible by 50/100
-        if (!strike || isNaN(strike)) continue;
-        if (strike % 50 !== 0 && strike % 100 !== 0) continue;
-
-        // CALL side (left)
         const ce_oi = Number((row[0] || "").toString().replace(/,/g, "")) || 0;
-        const ce_iv = Number(row[3]);
+        const ce_iv = Number(row[3]) || null;
 
-        // PUT side (right)
-        const pe_iv = Number(row[row.length - 4]);
+        const pe_iv = Number(row[row.length - 4]) || null;
         const pe_oi = Number((row[row.length - 1] || "").toString().replace(/,/g, "")) || 0;
 
         parsed.push({
             strike,
-            ce_iv: isNaN(ce_iv) ? null : ce_iv,
-            pe_iv: isNaN(pe_iv) ? null : pe_iv,
+            ce_iv,
+            pe_iv,
             ce_oi,
             pe_oi
         });
