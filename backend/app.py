@@ -12,6 +12,9 @@ from github_utils import (
     get_csv_from_github,
     commit_csv_to_github
 )
+@app.route("/health", methods=["GET"])
+def health():
+    return jsonify({"status": "ok"})
 
 app = Flask(__name__)
 CORS(app)
