@@ -63,19 +63,19 @@ function processCSV() {
         complete: res => {
             const parsed = parseNSEOptionChain(res.data);
             console.log("OPTION CHAIN LENGTH:", parsed.length);
-            console.log("FIRST 5 ROWS:", parsed.slice(0, 5));
+            console.log("SAMPLE ROW:", parsed[0]);
             sendToBackend(symbol, date, spot, strikeStep, parsed);
         }
     });
 }
 
-// ---------------- NSE OPTION CHAIN PARSER (CORRECT MAPPING) ----------------
+// ---------------- NSE OPTION CHAIN PARSER (CORRECT & FINAL) ----------------
 
 function parseNSEOptionChain(rows) {
     const parsed = [];
     if (!rows || rows.length < 3) return parsed;
 
-    // Header row contains STRIKE
+    // Header row (row index 1) contains STRIKE
     const headerRow = rows[1];
     const strikeIndex = headerRow.findIndex(
         h => String(h).trim().toUpperCase() === "STRIKE"
@@ -86,13 +86,12 @@ function parseNSEOptionChain(rows) {
         return parsed;
     }
 
-    // CALL IV = 4 columns LEFT of STRIKE
-    // PUT IV  = 6 columns RIGHT of STRIKE
-    const CE_IV_INDEX = strikeIndex - 4;
-    const CE_OI_INDEX = strikeIndex - 9;
+    // Offsets relative to STRIKE (NSE ED standard)
+    const CE_OI_INDEX = strikeIndex - 10;
+    const CE_IV_INDEX = strikeIndex - 7;
 
-    const PE_IV_INDEX = strikeIndex + 6;
-    const PE_OI_INDEX = strikeIndex + 9;
+    const PE_IV_INDEX = strikeIndex + 7;
+    const PE_OI_INDEX = strikeIndex + 10;
 
     for (let i = 2; i < rows.length; i++) {
         const row = rows[i];
