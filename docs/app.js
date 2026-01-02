@@ -41,7 +41,7 @@ function startServerWatcher() {
 
 window.onload = startServerWatcher;
 
-// ================= MAIN BUTTON HANDLER =================
+// ================= MAIN BUTTON =================
 
 function processCSV() {
     if (!serverActive) {
@@ -65,11 +65,14 @@ function processCSV() {
         header: true,
         skipEmptyLines: true,
         complete: function (results) {
-            console.log("RAW CSV HEADERS:", Object.keys(results.data[0] || {}));
+            console.log("CSV HEADERS:", Object.keys(results.data[0] || {}));
 
             const parsed = parseOptionChain(results.data);
 
-            console.log("PARSED SAMPLE:", parsed.slice(0, 5));
+            console.log(
+                "PARSED STRIKES (first 10):",
+                parsed.slice(0, 10).map(r => r.strike)
+            );
 
             sendToBackend(symbol, date, spot, strikeStep, parsed);
         }
@@ -80,28 +83,44 @@ function processCSV() {
 
 function parseOptionChain(rows) {
     const parsed = [];
+    if (!rows.length) return parsed;
+
+    // -------- Detect STRIKE column dynamically --------
+    const headers = Object.keys(rows[0]);
+
+    let strikeKey = null;
+    for (const key of headers) {
+        const sample = rows[0][key];
+        if (
+            sample &&
+            !isNaN(sample) &&
+            Number(sample) % 50 === 0 &&
+            Number(sample) > 1000
+        ) {
+            strikeKey = key;
+            break;
+        }
+    }
+
+    console.log("DETECTED STRIKE COLUMN:", strikeKey);
+
+    if (!strikeKey) return parsed;
 
     rows.forEach(row => {
-        // ---- STRIKE PRICE (NSE standard) ----
-        const strikeRaw = row["STRIKE PRICE"];
-        if (!strikeRaw) return;
+        const strike = Number(
+            (row[strikeKey] || "").toString().replace(/,/g, "")
+        );
 
-        const strike = Number(strikeRaw.toString().replace(/,/g, ""));
-
-        // ---- CALL SIDE (LEFT) ----
         const ce_iv = Number(row["IV"]);
+        const pe_iv = Number(row["IV_1"]);
+
         const ce_oi = Number(
             (row["OI"] || "").toString().replace(/,/g, "")
         );
-
-        // ---- PUT SIDE (RIGHT) ----
-        // PapaParse renames duplicate headers as _1
-        const pe_iv = Number(row["IV_1"]);
         const pe_oi = Number(
             (row["OI_1"] || "").toString().replace(/,/g, "")
         );
 
-        // ---- VALIDATION ----
         if (
             isNaN(strike) ||
             isNaN(ce_iv) ||
@@ -120,7 +139,7 @@ function parseOptionChain(rows) {
     return parsed;
 }
 
-// ================= BACKEND CALL =================
+// ================= BACKEND =================
 
 function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
     fetch(PROCESS_URL, {
