@@ -84,13 +84,24 @@ function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
             option_chain: optionChain
         })
     })
-    .then(res => res.json())
+    .then(async res => {
+        const data = await res.json();
+        console.log("BACKEND STATUS:", res.status);
+        console.log("BACKEND RESPONSE:", data);
+        return data;
+    })
     .then(data => {
         document.getElementById("status").innerText =
             data.status === "success"
                 ? "✅ Saved successfully"
-                : "❌ " + (data.message || "Error");
+                : "❌ " + JSON.stringify(data);
     })
+    .catch(err => {
+        console.error("FETCH ERROR:", err);
+        document.getElementById("status").innerText = "❌ Network / JS error";
+    });
+}
+
     .catch(err => {
         console.error(err);
         document.getElementById("status").innerText = "❌ Backend error";
