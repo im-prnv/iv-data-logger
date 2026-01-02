@@ -7,6 +7,11 @@
 </head>
 <body>
 
+<div class="status-bar">
+    Backend Status:
+    <span id="serverStatus" class="status sleeping">Sleeping</span>
+</div>
+
 <div class="container">
     <h2>IV Data Logger</h2>
 
@@ -25,7 +30,9 @@
     <label>Option Chain CSV</label>
     <input type="file" id="csvFile" accept=".csv">
 
-    <button onclick="processCSV()">Process & Save</button>
+    <button id="processBtn" onclick="processCSV()" disabled>
+        Process & Save
+    </button>
 
     <p id="status"></p>
 </div>
