@@ -1,3 +1,5 @@
+// ================= CONFIG =================
+
 const BACKEND_BASE = "https://iv-data-logger.onrender.com";
 const HEALTH_URL = `${BACKEND_BASE}/health`;
 const PROCESS_URL = `${BACKEND_BASE}/process-option-chain`;
@@ -7,7 +9,7 @@ const processBtn = document.getElementById("processBtn");
 
 let serverActive = false;
 
-// ---------------- SERVER WAKE LOGIC ----------------
+// ================= SERVER STATUS =================
 
 function setStatus(text, cls) {
     statusEl.innerText = text;
@@ -24,7 +26,7 @@ async function checkServer() {
             return;
         }
     } catch (e) {}
-    
+
     serverActive = false;
     setStatus("Waking up…", "waking");
 }
@@ -39,11 +41,11 @@ function startServerWatcher() {
 
 window.onload = startServerWatcher;
 
-// ---------------- CSV PROCESSING ----------------
+// ================= MAIN BUTTON HANDLER =================
 
 function processCSV() {
     if (!serverActive) {
-        alert("Server is waking up. Please wait.");
+        alert("Backend is waking up. Please wait.");
         return;
     }
 
@@ -64,28 +66,65 @@ function processCSV() {
         skipEmptyLines: true,
         complete: function (results) {
             const parsed = parseOptionChain(results.data);
+
+            console.log("PARSED SAMPLE:", parsed.slice(0, 5));
+
             sendToBackend(symbol, date, spot, strikeStep, parsed);
         }
     });
 }
 
-// ---------------- NSE CSV PARSING ----------------
+// ================= NSE OPTION CHAIN PARSER =================
 
 function parseOptionChain(rows) {
     const parsed = [];
 
     rows.forEach(row => {
-        const values = Object.values(row);
-        if (values.length < 15) return;
+        // ---- STRIKE PRICE ----
+        const strikeRaw =
+            row["STRIKE PRICE"] ||
+            row["Strike Price"] ||
+            row["STRIKE"] ||
+            row["strike"];
 
-        const strike = Number(values[Math.floor(values.length / 2)]);
-        const ce_iv = Number(values[3]);
-        const pe_iv = Number(values[values.length - 4]);
+        if (!strikeRaw) return;
 
-        const ce_oi = Number(values[0].toString().replace(/,/g, ""));
-        const pe_oi = Number(values[values.length - 1].toString().replace(/,/g, ""));
+        const strike = Number(strikeRaw.toString().replace(/,/g, ""));
 
-        if (!strike || isNaN(ce_iv) || isNaN(pe_iv)) return;
+        // ---- CALL IV ----
+        const ceIvRaw =
+            row["IV"] ||
+            row["Call IV"] ||
+            row["CE IV"];
+
+        // ---- PUT IV ----
+        const peIvRaw =
+            row["IV.1"] ||
+            row["Put IV"] ||
+            row["PE IV"];
+
+        // ---- CALL OI ----
+        const ceOiRaw =
+            row["OI"] ||
+            row["Call OI"] ||
+            row["CE OI"];
+
+        // ---- PUT OI ----
+        const peOiRaw =
+            row["OI.1"] ||
+            row["Put OI"] ||
+            row["PE OI"];
+
+        const ce_iv = Number(ceIvRaw);
+        const pe_iv = Number(peIvRaw);
+        const ce_oi = Number((ceOiRaw || "").toString().replace(/,/g, ""));
+        const pe_oi = Number((peOiRaw || "").toString().replace(/,/g, ""));
+
+        if (
+            isNaN(strike) ||
+            isNaN(ce_iv) ||
+            isNaN(pe_iv)
+        ) return;
 
         parsed.push({
             strike,
@@ -99,7 +138,7 @@ function parseOptionChain(rows) {
     return parsed;
 }
 
-// ---------------- BACKEND CALL ----------------
+// ================= BACKEND CALL =================
 
 function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
     fetch(PROCESS_URL, {
@@ -115,14 +154,16 @@ function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
     })
     .then(async res => {
         const data = await res.json();
-        console.log("BACKEND:", data);
+        console.log("BACKEND STATUS:", res.status);
+        console.log("BACKEND RESPONSE:", data);
+
         document.getElementById("status").innerText =
             data.status === "success"
                 ? "✅ Saved successfully"
                 : "❌ " + JSON.stringify(data);
     })
     .catch(err => {
-        console.error(err);
+        console.error("FETCH ERROR:", err);
         document.getElementById("status").innerText = "❌ Backend error";
     });
 }
