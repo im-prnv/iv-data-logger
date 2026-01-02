@@ -65,6 +65,8 @@ function processCSV() {
         header: true,
         skipEmptyLines: true,
         complete: function (results) {
+            console.log("RAW CSV HEADERS:", Object.keys(results.data[0] || {}));
+
             const parsed = parseOptionChain(results.data);
 
             console.log("PARSED SAMPLE:", parsed.slice(0, 5));
@@ -80,46 +82,26 @@ function parseOptionChain(rows) {
     const parsed = [];
 
     rows.forEach(row => {
-        // ---- STRIKE PRICE ----
-        const strikeRaw =
-            row["STRIKE PRICE"] ||
-            row["Strike Price"] ||
-            row["STRIKE"] ||
-            row["strike"];
-
+        // ---- STRIKE PRICE (NSE standard) ----
+        const strikeRaw = row["STRIKE PRICE"];
         if (!strikeRaw) return;
 
         const strike = Number(strikeRaw.toString().replace(/,/g, ""));
 
-        // ---- CALL IV ----
-        const ceIvRaw =
-            row["IV"] ||
-            row["Call IV"] ||
-            row["CE IV"];
+        // ---- CALL SIDE (LEFT) ----
+        const ce_iv = Number(row["IV"]);
+        const ce_oi = Number(
+            (row["OI"] || "").toString().replace(/,/g, "")
+        );
 
-        // ---- PUT IV ----
-        const peIvRaw =
-            row["IV.1"] ||
-            row["Put IV"] ||
-            row["PE IV"];
+        // ---- PUT SIDE (RIGHT) ----
+        // PapaParse renames duplicate headers as _1
+        const pe_iv = Number(row["IV_1"]);
+        const pe_oi = Number(
+            (row["OI_1"] || "").toString().replace(/,/g, "")
+        );
 
-        // ---- CALL OI ----
-        const ceOiRaw =
-            row["OI"] ||
-            row["Call OI"] ||
-            row["CE OI"];
-
-        // ---- PUT OI ----
-        const peOiRaw =
-            row["OI.1"] ||
-            row["Put OI"] ||
-            row["PE OI"];
-
-        const ce_iv = Number(ceIvRaw);
-        const pe_iv = Number(peIvRaw);
-        const ce_oi = Number((ceOiRaw || "").toString().replace(/,/g, ""));
-        const pe_oi = Number((peOiRaw || "").toString().replace(/,/g, ""));
-
+        // ---- VALIDATION ----
         if (
             isNaN(strike) ||
             isNaN(ce_iv) ||
