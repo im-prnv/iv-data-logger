@@ -63,53 +63,61 @@ function processCSV() {
         complete: res => {
             const parsed = parseNSEOptionChain(res.data);
             console.log("OPTION CHAIN LENGTH:", parsed.length);
-            console.log("FIRST 10 STRIKES:", parsed.slice(0, 10).map(r => r.strike));
+            console.log("FIRST 5 ROWS:", parsed.slice(0, 5));
             sendToBackend(symbol, date, spot, strikeStep, parsed);
         }
     });
 }
 
-// ---------------- NSE ED CSV PARSER (FINAL & CORRECT) ----------------
+// ---------------- NSE OPTION CHAIN PARSER (CORRECT MAPPING) ----------------
 
 function parseNSEOptionChain(rows) {
     const parsed = [];
     if (!rows || rows.length < 3) return parsed;
 
-    // 🔑 Row 1 contains real headers
+    // Header row contains STRIKE
     const headerRow = rows[1];
-    const strikeIndex = headerRow.findIndex(h =>
-        String(h).trim().toUpperCase() === "STRIKE"
+    const strikeIndex = headerRow.findIndex(
+        h => String(h).trim().toUpperCase() === "STRIKE"
     );
 
     if (strikeIndex === -1) {
-        console.error("❌ STRIKE column not found");
+        console.error("STRIKE column not found");
         return parsed;
     }
 
-    console.log("✔ STRIKE COLUMN INDEX:", strikeIndex);
+    // CALL IV = 4 columns LEFT of STRIKE
+    // PUT IV  = 6 columns RIGHT of STRIKE
+    const CE_IV_INDEX = strikeIndex - 4;
+    const CE_OI_INDEX = strikeIndex - 9;
 
-    // Data starts from row 2 onwards
+    const PE_IV_INDEX = strikeIndex + 6;
+    const PE_OI_INDEX = strikeIndex + 9;
+
     for (let i = 2; i < rows.length; i++) {
         const row = rows[i];
-        if (!row || row.length <= strikeIndex) continue;
+        if (!row || row.length <= PE_OI_INDEX) continue;
 
         const strike = Number(
             String(row[strikeIndex]).replace(/,/g, "")
         );
         if (isNaN(strike)) continue;
 
-        // CALL side
-        const ce_oi = Number(String(row[1] || "").replace(/,/g, "")) || 0;
-        const ce_iv = Number(row[4]) || null;
+        const ce_iv = Number(row[CE_IV_INDEX]);
+        const pe_iv = Number(row[PE_IV_INDEX]);
 
-        // PUT side
-        const pe_iv = Number(row[row.length - 4]) || null;
-        const pe_oi = Number(String(row[row.length - 1] || "").replace(/,/g, "")) || 0;
+        const ce_oi = Number(
+            String(row[CE_OI_INDEX] || "").replace(/,/g, "")
+        ) || 0;
+
+        const pe_oi = Number(
+            String(row[PE_OI_INDEX] || "").replace(/,/g, "")
+        ) || 0;
 
         parsed.push({
             strike,
-            ce_iv,
-            pe_iv,
+            ce_iv: isNaN(ce_iv) ? null : ce_iv,
+            pe_iv: isNaN(pe_iv) ? null : pe_iv,
             ce_oi,
             pe_oi
         });
