@@ -1,5 +1,3 @@
-// ================= CONFIG =================
-
 const BACKEND_BASE = "https://iv-data-logger.onrender.com";
 const HEALTH_URL = `${BACKEND_BASE}/health`;
 const PROCESS_URL = `${BACKEND_BASE}/process-option-chain`;
@@ -9,7 +7,7 @@ const processBtn = document.getElementById("processBtn");
 
 let serverActive = false;
 
-// ================= SERVER STATUS =================
+// ---------- SERVER STATUS ----------
 
 function setStatus(text, cls) {
     statusEl.innerText = text;
@@ -26,88 +24,70 @@ async function checkServer() {
             return;
         }
     } catch {}
-
-    serverActive = false;
     setStatus("Waking up…", "waking");
 }
 
 function startServerWatcher() {
     setStatus("Sleeping", "sleeping");
-    const interval = setInterval(async () => {
+    const i = setInterval(async () => {
         await checkServer();
-        if (serverActive) clearInterval(interval);
+        if (serverActive) clearInterval(i);
     }, 5000);
 }
 
 window.onload = startServerWatcher;
 
-// ================= MAIN =================
+// ---------- MAIN ----------
 
 function processCSV() {
     if (!serverActive) {
-        alert("Backend is waking up. Please wait.");
+        alert("Backend is waking up");
         return;
     }
 
-    const fileInput = document.getElementById("csvFile");
+    const file = document.getElementById("csvFile").files[0];
     const symbol = document.getElementById("symbol").value;
     const date = document.getElementById("date").value;
     const spot = document.getElementById("spot").value;
 
-    if (!fileInput.files.length || !spot || !date) {
-        alert("Please fill all fields");
+    if (!file || !date || !spot) {
+        alert("Fill all fields");
         return;
     }
 
     const strikeStep = symbol === "BANKNIFTY" ? 100 : 50;
 
-    Papa.parse(fileInput.files[0], {
-        header: false,               // 🔴 IMPORTANT
+    Papa.parse(file, {
+        header: false,
         skipEmptyLines: true,
-        complete: function (results) {
-            const parsed = parseOptionChain(results.data);
-
-            console.log(
-                "PARSED STRIKES:",
-                parsed.slice(0, 10).map(r => r.strike)
-            );
-
+        complete: res => {
+            const parsed = parseOptionChain(res.data);
+            console.log("OPTION CHAIN LENGTH:", parsed.length);
+            console.log("FIRST 10 STRIKES:", parsed.slice(0, 10).map(r => r.strike));
             sendToBackend(symbol, date, spot, strikeStep, parsed);
         }
     });
 }
 
-// ================= NSE PARSER =================
+// ---------- NSE PARSER (FINAL) ----------
 
 function parseOptionChain(rows) {
     const parsed = [];
 
     rows.forEach(row => {
-        // Skip header / junk rows
-        if (!row.length || isNaN(row[0])) return;
+        if (!row || row.length < 20) return;
 
         const len = row.length;
         const strikeIndex = Math.floor(len / 2);
 
         const strike = Number(row[strikeIndex]);
+        if (isNaN(strike)) return;
 
-        // CALL side (left of strike)
-        const ce_iv = Number(row[3]);
-        const ce_oi = Number(
-            (row[0] || "").toString().replace(/,/g, "")
-        );
+        const ce_iv = Number(row[3]) || null;
+        const pe_iv = Number(row[len - 4]) || null;
 
-        // PUT side (right of strike)
-        const pe_iv = Number(row[len - 4]);
-        const pe_oi = Number(
-            (row[len - 1] || "").toString().replace(/,/g, "")
-        );
-
-        if (
-            isNaN(strike) ||
-            isNaN(ce_iv) ||
-            isNaN(pe_iv)
-        ) return;
+        const ce_oi = Number((row[0] || "").toString().replace(/,/g, "")) || 0;
+        const pe_oi = Number((row[len - 1] || "").toString().replace(/,/g, "")) || 0;
 
         parsed.push({
             strike,
@@ -121,7 +101,7 @@ function parseOptionChain(rows) {
     return parsed;
 }
 
-// ================= BACKEND =================
+// ---------- BACKEND ----------
 
 function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
     fetch(PROCESS_URL, {
@@ -135,17 +115,11 @@ function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
             option_chain: optionChain
         })
     })
-    .then(async res => {
-        const data = await res.json();
-        console.log("BACKEND:", data);
-
+    .then(r => r.json())
+    .then(d => {
+        console.log("BACKEND:", d);
         document.getElementById("status").innerText =
-            data.status === "success"
-                ? "✅ Saved successfully"
-                : "❌ " + JSON.stringify(data);
+            d.status === "success" ? "✅ Saved" : "❌ " + d.error;
     })
-    .catch(err => {
-        console.error(err);
-        document.getElementById("status").innerText = "❌ Backend error";
-    });
+    .catch(e => console.error(e));
 }
