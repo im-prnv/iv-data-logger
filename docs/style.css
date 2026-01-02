@@ -6,7 +6,7 @@ body {
 
 .container {
     max-width: 420px;
-    margin: 50px auto;
+    margin: 80px auto;
     padding: 20px;
     background: #020617;
     border-radius: 8px;
@@ -32,9 +32,27 @@ button {
     cursor: pointer;
 }
 
-button:hover {
-    background: #1d4ed8;
+button:disabled {
+    background: #475569;
+    cursor: not-allowed;
 }
+
+.status-bar {
+    position: fixed;
+    top: 10px;
+    right: 10px;
+    font-size: 14px;
+}
+
+.status {
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-left: 6px;
+}
+
+.sleeping { background: #991b1b; }
+.waking   { background: #ca8a04; }
+.active   { background: #15803d; }
 
 #status {
     margin-top: 15px;
