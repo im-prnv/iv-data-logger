@@ -7,7 +7,7 @@ const processBtn = document.getElementById("processBtn");
 
 let serverActive = false;
 
-// ---------- SERVER STATUS ----------
+// ---------------- SERVER STATUS ----------------
 
 function setStatus(text, cls) {
     statusEl.innerText = text;
@@ -16,8 +16,8 @@ function setStatus(text, cls) {
 
 async function checkServer() {
     try {
-        const res = await fetch(HEALTH_URL, { cache: "no-store" });
-        if (res.ok) {
+        const r = await fetch(HEALTH_URL, { cache: "no-store" });
+        if (r.ok) {
             serverActive = true;
             setStatus("Active", "active");
             processBtn.disabled = false;
@@ -29,19 +29,19 @@ async function checkServer() {
 
 function startServerWatcher() {
     setStatus("Sleeping", "sleeping");
-    const i = setInterval(async () => {
+    const t = setInterval(async () => {
         await checkServer();
-        if (serverActive) clearInterval(i);
+        if (serverActive) clearInterval(t);
     }, 5000);
 }
 
 window.onload = startServerWatcher;
 
-// ---------- MAIN ----------
+// ---------------- MAIN ----------------
 
 function processCSV() {
     if (!serverActive) {
-        alert("Backend is waking up");
+        alert("Backend waking up. Wait.");
         return;
     }
 
@@ -61,7 +61,7 @@ function processCSV() {
         header: false,
         skipEmptyLines: true,
         complete: res => {
-            const parsed = parseOptionChain(res.data);
+            const parsed = parseNSEOptionChain(res.data);
             console.log("OPTION CHAIN LENGTH:", parsed.length);
             console.log("FIRST 10 STRIKES:", parsed.slice(0, 10).map(r => r.strike));
             sendToBackend(symbol, date, spot, strikeStep, parsed);
@@ -69,39 +69,43 @@ function processCSV() {
     });
 }
 
-// ---------- NSE PARSER (FINAL) ----------
+// ---------------- NSE PARSER (CORRECT) ----------------
 
-function parseOptionChain(rows) {
+function parseNSEOptionChain(rows) {
     const parsed = [];
 
-    rows.forEach(row => {
-        if (!row || row.length < 20) return;
+    for (const row of rows) {
+        if (!Array.isArray(row)) continue;
 
-        const len = row.length;
-        const strikeIndex = Math.floor(len / 2);
+        const mid = Math.floor(row.length / 2);
+        const strike = Number(row[mid]);
 
-        const strike = Number(row[strikeIndex]);
-        if (isNaN(strike)) return;
+        // REAL DATA ROW IDENTIFIER:
+        // middle cell must be numeric & divisible by 50/100
+        if (!strike || isNaN(strike)) continue;
+        if (strike % 50 !== 0 && strike % 100 !== 0) continue;
 
-        const ce_iv = Number(row[3]) || null;
-        const pe_iv = Number(row[len - 4]) || null;
-
+        // CALL side (left)
         const ce_oi = Number((row[0] || "").toString().replace(/,/g, "")) || 0;
-        const pe_oi = Number((row[len - 1] || "").toString().replace(/,/g, "")) || 0;
+        const ce_iv = Number(row[3]);
+
+        // PUT side (right)
+        const pe_iv = Number(row[row.length - 4]);
+        const pe_oi = Number((row[row.length - 1] || "").toString().replace(/,/g, "")) || 0;
 
         parsed.push({
             strike,
-            ce_iv,
-            pe_iv,
+            ce_iv: isNaN(ce_iv) ? null : ce_iv,
+            pe_iv: isNaN(pe_iv) ? null : pe_iv,
             ce_oi,
             pe_oi
         });
-    });
+    }
 
     return parsed;
 }
 
-// ---------- BACKEND ----------
+// ---------------- BACKEND ----------------
 
 function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
     fetch(PROCESS_URL, {
@@ -119,7 +123,9 @@ function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
     .then(d => {
         console.log("BACKEND:", d);
         document.getElementById("status").innerText =
-            d.status === "success" ? "✅ Saved" : "❌ " + d.error;
+            d.status === "success"
+                ? "✅ Saved successfully"
+                : "❌ " + d.error;
     })
     .catch(e => console.error(e));
 }
