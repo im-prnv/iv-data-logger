@@ -72,3 +72,27 @@ function parseOptionChain(rows) {
 
     return parsed;
 }
+function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
+    fetch("https://iv-data-logger.onrender.com/process-option-chain", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            symbol: symbol,
+            date: date,
+            spot: spot,
+            strike_step: strikeStep,
+            option_chain: optionChain
+        })
+    })
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("status").innerText =
+            data.status === "success"
+                ? "✅ Saved successfully"
+                : "❌ " + (data.message || "Error");
+    })
+    .catch(err => {
+        console.error(err);
+        document.getElementById("status").innerText = "❌ Backend error";
+    });
+}
