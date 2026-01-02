@@ -25,7 +25,7 @@ async function checkServer() {
             processBtn.disabled = false;
             return;
         }
-    } catch (e) {}
+    } catch {}
 
     serverActive = false;
     setStatus("Waking up…", "waking");
@@ -41,7 +41,7 @@ function startServerWatcher() {
 
 window.onload = startServerWatcher;
 
-// ================= MAIN BUTTON =================
+// ================= MAIN =================
 
 function processCSV() {
     if (!serverActive) {
@@ -62,15 +62,13 @@ function processCSV() {
     const strikeStep = symbol === "BANKNIFTY" ? 100 : 50;
 
     Papa.parse(fileInput.files[0], {
-        header: true,
+        header: false,               // 🔴 IMPORTANT
         skipEmptyLines: true,
         complete: function (results) {
-            console.log("CSV HEADERS:", Object.keys(results.data[0] || {}));
-
             const parsed = parseOptionChain(results.data);
 
             console.log(
-                "PARSED STRIKES (first 10):",
+                "PARSED STRIKES:",
                 parsed.slice(0, 10).map(r => r.strike)
             );
 
@@ -79,46 +77,30 @@ function processCSV() {
     });
 }
 
-// ================= NSE OPTION CHAIN PARSER =================
+// ================= NSE PARSER =================
 
 function parseOptionChain(rows) {
     const parsed = [];
-    if (!rows.length) return parsed;
-
-    // -------- Detect STRIKE column dynamically --------
-    const headers = Object.keys(rows[0]);
-
-    let strikeKey = null;
-    for (const key of headers) {
-        const sample = rows[0][key];
-        if (
-            sample &&
-            !isNaN(sample) &&
-            Number(sample) % 50 === 0 &&
-            Number(sample) > 1000
-        ) {
-            strikeKey = key;
-            break;
-        }
-    }
-
-    console.log("DETECTED STRIKE COLUMN:", strikeKey);
-
-    if (!strikeKey) return parsed;
 
     rows.forEach(row => {
-        const strike = Number(
-            (row[strikeKey] || "").toString().replace(/,/g, "")
-        );
+        // Skip header / junk rows
+        if (!row.length || isNaN(row[0])) return;
 
-        const ce_iv = Number(row["IV"]);
-        const pe_iv = Number(row["IV_1"]);
+        const len = row.length;
+        const strikeIndex = Math.floor(len / 2);
 
+        const strike = Number(row[strikeIndex]);
+
+        // CALL side (left of strike)
+        const ce_iv = Number(row[3]);
         const ce_oi = Number(
-            (row["OI"] || "").toString().replace(/,/g, "")
+            (row[0] || "").toString().replace(/,/g, "")
         );
+
+        // PUT side (right of strike)
+        const pe_iv = Number(row[len - 4]);
         const pe_oi = Number(
-            (row["OI_1"] || "").toString().replace(/,/g, "")
+            (row[len - 1] || "").toString().replace(/,/g, "")
         );
 
         if (
@@ -155,8 +137,7 @@ function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
     })
     .then(async res => {
         const data = await res.json();
-        console.log("BACKEND STATUS:", res.status);
-        console.log("BACKEND RESPONSE:", data);
+        console.log("BACKEND:", data);
 
         document.getElementById("status").innerText =
             data.status === "success"
@@ -164,7 +145,7 @@ function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
                 : "❌ " + JSON.stringify(data);
     })
     .catch(err => {
-        console.error("FETCH ERROR:", err);
+        console.error(err);
         document.getElementById("status").innerText = "❌ Backend error";
     });
 }
