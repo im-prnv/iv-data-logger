@@ -56,13 +56,12 @@ function processCSV() {
     }
 
     const strikeStep = symbol === "BANKNIFTY" ? 100 : 50;
-    const atm = Math.round(spot / strikeStep) * strikeStep;
 
     Papa.parse(file, {
         header: false,
         skipEmptyLines: true,
         complete: res => {
-            const parsed = parseNSEOptionChain(res.data, atm, strikeStep);
+            const parsed = parseNSEOptionChain(res.data);
             console.log("OPTION CHAIN LENGTH:", parsed.length);
             console.log("FIRST 10 STRIKES:", parsed.slice(0, 10).map(r => r.strike));
             sendToBackend(symbol, date, spot, strikeStep, parsed);
@@ -70,50 +69,42 @@ function processCSV() {
     });
 }
 
-// ---------------- NSE PARSER (FINAL & GUARANTEED) ----------------
+// ---------------- NSE ED CSV PARSER (FINAL & CORRECT) ----------------
 
-function parseNSEOptionChain(rows, atm, step) {
-    if (!rows || !rows.length) return [];
-
-    let strikeColIndex = null;
-
-    // -------- PASS 1: FIND STRIKE COLUMN --------
-    for (const row of rows) {
-        if (!Array.isArray(row)) continue;
-
-        for (let i = 0; i < row.length; i++) {
-            const val = Number(row[i]);
-            if (
-                !isNaN(val) &&
-                (val === atm || val === atm - step || val === atm + step)
-            ) {
-                strikeColIndex = i;
-                console.log("DETECTED STRIKE COLUMN INDEX:", strikeColIndex);
-                break;
-            }
-        }
-        if (strikeColIndex !== null) break;
-    }
-
-    if (strikeColIndex === null) {
-        console.error("❌ STRIKE COLUMN NOT FOUND");
-        return [];
-    }
-
-    // -------- PASS 2: PARSE DATA --------
+function parseNSEOptionChain(rows) {
     const parsed = [];
+    if (!rows || rows.length < 3) return parsed;
 
-    for (const row of rows) {
-        if (!Array.isArray(row)) continue;
+    // 🔑 Row 1 contains real headers
+    const headerRow = rows[1];
+    const strikeIndex = headerRow.findIndex(h =>
+        String(h).trim().toUpperCase() === "STRIKE"
+    );
 
-        const strike = Number(row[strikeColIndex]);
+    if (strikeIndex === -1) {
+        console.error("❌ STRIKE column not found");
+        return parsed;
+    }
+
+    console.log("✔ STRIKE COLUMN INDEX:", strikeIndex);
+
+    // Data starts from row 2 onwards
+    for (let i = 2; i < rows.length; i++) {
+        const row = rows[i];
+        if (!row || row.length <= strikeIndex) continue;
+
+        const strike = Number(
+            String(row[strikeIndex]).replace(/,/g, "")
+        );
         if (isNaN(strike)) continue;
 
-        const ce_oi = Number((row[0] || "").toString().replace(/,/g, "")) || 0;
-        const ce_iv = Number(row[3]) || null;
+        // CALL side
+        const ce_oi = Number(String(row[1] || "").replace(/,/g, "")) || 0;
+        const ce_iv = Number(row[4]) || null;
 
+        // PUT side
         const pe_iv = Number(row[row.length - 4]) || null;
-        const pe_oi = Number((row[row.length - 1] || "").toString().replace(/,/g, "")) || 0;
+        const pe_oi = Number(String(row[row.length - 1] || "").replace(/,/g, "")) || 0;
 
         parsed.push({
             strike,
