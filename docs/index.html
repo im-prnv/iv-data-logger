@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>IV Data Logger</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+    <h2>IV Data Logger</h2>
+
+    <label>Symbol</label>
+    <select id="symbol">
+        <option value="NIFTY">NIFTY</option>
+        <option value="BANKNIFTY">BANKNIFTY</option>
+    </select>
+
+    <label>Date</label>
+    <input type="date" id="date">
+
+    <label>Spot Price</label>
+    <input type="number" id="spot" placeholder="e.g. 26129">
+
+    <label>Option Chain CSV</label>
+    <input type="file" id="csvFile" accept=".csv">
+
+    <button onclick="processCSV()">Process & Save</button>
+
+    <p id="status"></p>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
