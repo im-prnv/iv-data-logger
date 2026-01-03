@@ -7,171 +7,86 @@
   <!-- PapaParse -->
   <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css" />
+
   <!-- App JS -->
   <script src="app.js" defer></script>
-
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f2f4f7;
-      margin: 0;
-      padding: 30px;
-    }
-
-    .container {
-      background: #ffffff;
-      max-width: 900px;
-      margin: auto;
-      padding: 25px 30px;
-      border-radius: 6px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-    }
-
-    h2 {
-      margin-top: 0;
-    }
-
-    label {
-      display: block;
-      margin-top: 15px;
-      font-weight: bold;
-    }
-
-    input, select {
-      padding: 6px;
-      margin-top: 6px;
-      width: 100%;
-      max-width: 420px;
-    }
-
-    button {
-      padding: 8px 14px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    /* ---------- BACKEND STATUS ---------- */
-
-    #backendStatus {
-      position: fixed;
-      top: 15px;
-      right: 20px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 13px;
-      font-weight: bold;
-      color: white;
-    }
-
-    .status-sleep { background: #777; }
-    .status-wake  { background: #e6a100; }
-    .status-live  { background: #2e9e5b; }
-
-    #status {
-      margin-top: 15px;
-      min-height: 20px;
-      font-weight: bold;
-    }
-
-    /* ---------- FILE ROW ---------- */
-
-    .file-row {
-      display: flex;
-      align-items: center;
-      gap: 15px;
-      margin-top: 10px;
-    }
-
-    .file-row input[type="file"] {
-      max-width: 420px;
-    }
-
-    /* ---------- PREVIEW ---------- */
-
-    #previewSection {
-      margin-top: 30px;
-      padding: 15px;
-      border: 1px solid #ccc;
-      background: #fafafa;
-    }
-
-    table {
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    table td {
-      padding: 6px 10px;
-      border: 1px solid #ccc;
-    }
-  </style>
 </head>
 
 <body>
 
-  <!-- BACKEND STATUS -->
-  <div id="backendStatus" class="status-sleep">Backend: Sleeping</div>
+  <!-- Backend Status -->
+  <div id="backendStatus" class="status status-sleep">
+    Backend: Sleeping
+  </div>
 
   <div class="container">
 
-    <h2>IV Data Logger</h2>
+    <header>
+      <h1>IV Data Logger</h1>
+      <p class="subtitle">Clean volatility data · Preview before save</p>
+    </header>
 
-    <label>Symbol</label>
-    <select id="symbol">
-      <option value="NIFTY">NIFTY</option>
-      <option value="BANKNIFTY">BANKNIFTY</option>
-    </select>
+    <!-- ================= INPUT CARD ================= -->
 
-    <label>Date</label>
-    <input type="date" id="date" />
+    <section class="card">
 
-    <label>Spot Price</label>
-    <input type="number" id="spot" placeholder="e.g. 26124" />
+      <div class="form-grid">
 
-    <label>Option Chain CSV</label>
-    <div class="file-row">
-      <input type="file" id="csvFile" accept=".csv" />
-      <button onclick="handleProcess()">Process & Preview</button>
-    </div>
+        <div class="form-group">
+          <label>Symbol</label>
+          <select id="symbol">
+            <option value="NIFTY">NIFTY</option>
+            <option value="BANKNIFTY">BANKNIFTY</option>
+          </select>
+        </div>
 
-    <div id="status"></div>
+        <div class="form-group">
+          <label>Date</label>
+          <input type="date" id="date" />
+        </div>
 
-    <!-- PREVIEW -->
-    <div id="previewSection" style="display:none;">
-      <h3>IV Data Preview</h3>
-      <table>
+        <div class="form-group">
+          <label>Spot Price</label>
+          <input type="number" id="spot" placeholder="e.g. 26124" />
+        </div>
+
+      </div>
+
+      <div class="file-row">
+        <input type="file" id="csvFile" accept=".csv" />
+        <button class="primary-btn" onclick="handleProcess()">
+          Process & Preview
+        </button>
+      </div>
+
+      <div id="status" class="status-text"></div>
+
+    </section>
+
+    <!-- ================= PREVIEW CARD ================= -->
+
+    <section id="previewSection" class="card preview-card" style="display:none;">
+
+      <div class="preview-header">
+        <h2>IV Data Preview</h2>
+        <span class="hint">Verify before saving</span>
+      </div>
+
+      <table class="preview-table">
         <tbody id="previewTable"></tbody>
       </table>
-      <button onclick="confirmSave()">✅ Confirm & Save</button>
-    </div>
+
+      <div class="preview-actions">
+        <button class="confirm-btn" onclick="confirmSave()">
+          ✅ Confirm & Save
+        </button>
+      </div>
+
+    </section>
 
   </div>
-
-  <!-- PAGE SCRIPT -->
-  <script>
-    function handleProcess() {
-      const file = document.getElementById("csvFile").files[0];
-      const symbol = document.getElementById("symbol").value;
-      const date = document.getElementById("date").value;
-      const spot = Number(document.getElementById("spot").value);
-
-      if (!file || !date || !spot) {
-        alert("Please fill all fields");
-        return;
-      }
-
-      const strikeStep = symbol === "BANKNIFTY" ? 100 : 50;
-
-      Papa.parse(file, {
-        header: false,
-        skipEmptyLines: true,
-        complete: res => {
-          const optionChain = parseNSEOptionChain(res.data);
-          processCSV(symbol, date, spot, strikeStep, optionChain);
-        }
-      });
-    }
-  </script>
 
 </body>
 </html>
