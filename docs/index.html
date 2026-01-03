@@ -13,13 +13,22 @@
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
+      background: #f2f4f7;
+      margin: 0;
+      padding: 30px;
+    }
+
+    .container {
+      background: #ffffff;
       max-width: 900px;
       margin: auto;
+      padding: 25px 30px;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
 
     h2 {
-      margin-bottom: 20px;
+      margin-top: 0;
     }
 
     label {
@@ -32,22 +41,40 @@
       padding: 6px;
       margin-top: 6px;
       width: 100%;
-      max-width: 400px;
+      max-width: 420px;
     }
 
     button {
       padding: 8px 14px;
-      cursor: pointer;
       font-weight: bold;
+      cursor: pointer;
     }
+
+    /* ---------- BACKEND STATUS ---------- */
+
+    #backendStatus {
+      position: fixed;
+      top: 15px;
+      right: 20px;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .status-sleep { background: #777; }
+    .status-wake  { background: #e6a100; }
+    .status-live  { background: #2e9e5b; }
 
     #status {
       margin-top: 15px;
-      font-weight: bold;
       min-height: 20px;
+      font-weight: bold;
     }
 
-    /* --- FILE + BUTTON ROW --- */
+    /* ---------- FILE ROW ---------- */
+
     .file-row {
       display: flex;
       align-items: center;
@@ -56,11 +83,16 @@
     }
 
     .file-row input[type="file"] {
-      max-width: 400px;
+      max-width: 420px;
     }
 
-    .file-row button {
-      white-space: nowrap;
+    /* ---------- PREVIEW ---------- */
+
+    #previewSection {
+      margin-top: 30px;
+      padding: 15px;
+      border: 1px solid #ccc;
+      background: #fafafa;
     }
 
     table {
@@ -72,74 +104,68 @@
       padding: 6px 10px;
       border: 1px solid #ccc;
     }
-
-    #previewSection {
-      margin-top: 25px;
-      padding: 15px;
-      border: 1px solid #aaa;
-      background: #f9f9f9;
-    }
   </style>
 </head>
 
 <body>
 
-  <h2>IV Data Logger</h2>
+  <!-- BACKEND STATUS -->
+  <div id="backendStatus" class="status-sleep">Backend: Sleeping</div>
 
-  <!-- ================= INPUT FORM ================= -->
+  <div class="container">
 
-  <label for="symbol">Symbol</label>
-  <select id="symbol">
-    <option value="NIFTY">NIFTY</option>
-    <option value="BANKNIFTY">BANKNIFTY</option>
-  </select>
+    <h2>IV Data Logger</h2>
 
-  <label for="date">Date</label>
-  <input type="date" id="date" />
+    <label>Symbol</label>
+    <select id="symbol">
+      <option value="NIFTY">NIFTY</option>
+      <option value="BANKNIFTY">BANKNIFTY</option>
+    </select>
 
-  <label for="spot">Spot Price</label>
-  <input type="number" id="spot" placeholder="e.g. 26124" />
+    <label>Date</label>
+    <input type="date" id="date" />
 
-  <label>Option Chain CSV</label>
-  <div class="file-row">
-    <input type="file" id="csvFile" accept=".csv" />
-    <button onclick="handleProcess()">Process & Preview</button>
+    <label>Spot Price</label>
+    <input type="number" id="spot" placeholder="e.g. 26124" />
+
+    <label>Option Chain CSV</label>
+    <div class="file-row">
+      <input type="file" id="csvFile" accept=".csv" />
+      <button onclick="handleProcess()">Process & Preview</button>
+    </div>
+
+    <div id="status"></div>
+
+    <!-- PREVIEW -->
+    <div id="previewSection" style="display:none;">
+      <h3>IV Data Preview</h3>
+      <table>
+        <tbody id="previewTable"></tbody>
+      </table>
+      <button onclick="confirmSave()">✅ Confirm & Save</button>
+    </div>
+
   </div>
 
-  <div id="status"></div>
-
-  <!-- ================= PREVIEW ================= -->
-
-  <div id="previewSection" style="display:none;">
-    <h3>IV Data Preview</h3>
-
-    <table>
-      <tbody id="previewTable"></tbody>
-    </table>
-
-    <button onclick="confirmSave()">✅ Confirm & Save to GitHub</button>
-  </div>
-
-  <!-- ================= SCRIPT GLUE ================= -->
-
+  <!-- PAGE SCRIPT -->
   <script>
     function handleProcess() {
-      const fileInput = document.getElementById("csvFile");
+      const file = document.getElementById("csvFile").files[0];
       const symbol = document.getElementById("symbol").value;
       const date = document.getElementById("date").value;
       const spot = Number(document.getElementById("spot").value);
 
-      if (!fileInput.files.length || !date || !spot) {
-        alert("Please fill all fields and upload CSV");
+      if (!file || !date || !spot) {
+        alert("Please fill all fields");
         return;
       }
 
       const strikeStep = symbol === "BANKNIFTY" ? 100 : 50;
 
-      Papa.parse(fileInput.files[0], {
+      Papa.parse(file, {
         header: false,
         skipEmptyLines: true,
-        complete: function (res) {
+        complete: res => {
           const optionChain = parseNSEOptionChain(res.data);
           processCSV(symbol, date, spot, strikeStep, optionChain);
         }
