@@ -1,6 +1,4 @@
-/* ======================================================
-   BASE
-====================================================== */
+/* ================= BASE ================= */
 
 * {
   box-sizing: border-box;
@@ -8,28 +6,20 @@
 
 body {
   margin: 0;
-  padding: 32px;
-  background: #eef1f5;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: #1f2937;
+  padding: 20px;
+  background: #0f172a;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  color: #e5e7eb;
 }
 
-/* ======================================================
-   CONTAINER
-====================================================== */
+/* ================= CONTAINER ================= */
 
 .container {
-  max-width: 920px;
+  max-width: 900px;
   margin: auto;
 }
 
-/* ======================================================
-   HEADER
-====================================================== */
-
-header {
-  margin-bottom: 20px;
-}
+/* ================= HEADER ================= */
 
 header h1 {
   margin: 0;
@@ -37,181 +27,164 @@ header h1 {
 }
 
 .subtitle {
-  margin-top: 4px;
-  color: #6b7280;
+  color: #9ca3af;
   font-size: 14px;
+  margin-top: 4px;
 }
 
-/* ======================================================
-   CARDS
-====================================================== */
+/* ================= CARD ================= */
 
 .card {
-  background: #ffffff;
-  border-radius: 8px;
-  padding: 20px 24px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
-  margin-bottom: 24px;
+  background: #020617;
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-top: 20px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
 }
 
-/* ======================================================
-   FORM
-====================================================== */
+/* ================= FORM ================= */
 
 .form-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
 }
 
 .form-group label {
-  display: block;
   font-size: 13px;
   font-weight: 600;
-  margin-bottom: 6px;
-  color: #374151;
+  color: #cbd5f5;
 }
 
 input, select {
   width: 100%;
   padding: 8px 10px;
+  margin-top: 6px;
   border-radius: 6px;
-  border: 1px solid #d1d5db;
-  font-size: 14px;
+  border: 1px solid #1e293b;
+  background: #020617;
+  color: #e5e7eb;
 }
 
 input:focus, select:focus {
   outline: none;
-  border-color: #2563eb;
+  border-color: #38bdf8;
 }
 
-/* ======================================================
-   FILE ROW
-====================================================== */
+/* ================= FILE ROW ================= */
 
 .file-row {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-top: 18px;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .file-row input[type="file"] {
   flex: 1;
 }
 
-/* ======================================================
-   BUTTONS
-====================================================== */
+/* ================= BUTTONS ================= */
 
 button {
   border: none;
-  cursor: pointer;
-  font-weight: 600;
   border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
 }
 
 .primary-btn {
   background: #2563eb;
-  color: #ffffff;
-  padding: 10px 18px;
+  color: #fff;
+  padding: 10px 16px;
 }
 
-.primary-btn:hover {
-  background: #1d4ed8;
+.primary-btn:disabled {
+  background: #334155;
+  cursor: not-allowed;
 }
 
 .confirm-btn {
   background: #16a34a;
-  color: #ffffff;
-  padding: 10px 22px;
+  color: #fff;
+  padding: 10px 20px;
 }
 
-.confirm-btn:hover {
-  background: #15803d;
-}
-
-/* ======================================================
-   STATUS TEXT
-====================================================== */
+/* ================= STATUS ================= */
 
 .status-text {
-  margin-top: 14px;
-  font-size: 14px;
+  margin-top: 12px;
   min-height: 18px;
+  font-size: 14px;
 }
 
-/* ======================================================
-   BACKEND STATUS BADGE
-====================================================== */
+/* ================= BACKEND BADGE ================= */
 
 #backendStatus {
   position: fixed;
-  top: 18px;
-  right: 22px;
+  top: 14px;
+  right: 18px;
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
-  color: #ffffff;
+  color: white;
 }
 
-.status-sleep {
-  background: #6b7280;
-}
+.status-sleep { background: #475569; }
+.status-wake  { background: #f59e0b; }
+.status-live  { background: #22c55e; }
 
-.status-wake {
-  background: #f59e0b;
-}
-
-.status-live {
-  background: #16a34a;
-}
-
-/* ======================================================
-   PREVIEW
-====================================================== */
+/* ================= PREVIEW ================= */
 
 .preview-card {
-  border-left: 5px solid #2563eb;
+  border-left: 4px solid #38bdf8;
 }
 
 .preview-header {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.preview-header h2 {
-  margin: 0;
-  font-size: 18px;
-}
-
-.hint {
-  font-size: 12px;
-  color: #6b7280;
+  align-items: center;
 }
 
 .preview-table {
   width: 100%;
-  border-collapse: collapse;
   margin-top: 10px;
+  border-collapse: collapse;
 }
 
 .preview-table td {
   padding: 8px 10px;
-  border-bottom: 1px solid #e5e7eb;
-  font-size: 14px;
+  border-bottom: 1px solid #1e293b;
 }
 
 .preview-table td:first-child {
   font-weight: 600;
-  color: #374151;
-  width: 40%;
+  color: #93c5fd;
 }
 
 .preview-actions {
-  margin-top: 18px;
   text-align: right;
+  margin-top: 16px;
+}
+
+/* ================= MOBILE ================= */
+
+@media (max-width: 600px) {
+  body {
+    padding: 14px;
+  }
+
+  header h1 {
+    font-size: 22px;
+  }
+
+  .primary-btn,
+  .confirm-btn {
+    width: 100%;
+  }
+
+  .preview-actions {
+    text-align: center;
+  }
 }
