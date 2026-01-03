@@ -1,6 +1,5 @@
 import csv
 import io
-import statistics
 
 CSV_HEADER = [
     "Date",
@@ -16,12 +15,12 @@ CSV_HEADER = [
     "IV_REGIME"
 ]
 
-# ---------------- ATM ----------------
+# ---------- ATM ----------
 
 def calculate_atm(spot, strike_step):
     return int(round(float(spot) / strike_step) * strike_step)
 
-# ---------------- VALID IV STRIKE ----------------
+# ---------- VALID IV STRIKE ----------
 
 def extract_valid_iv_row(option_chain, atm):
     candidates = []
@@ -56,30 +55,28 @@ def extract_valid_iv_row(option_chain, atm):
 
     return min(candidates, key=lambda x: abs(x["strike"] - atm))
 
-# ---------------- IV PERCENTILE ----------------
+# ---------- IV PERCENTILE & REGIME ----------
 
 def calculate_iv_percentile(past_ivs, current_iv):
     if not past_ivs:
         return None
-
     below = sum(1 for iv in past_ivs if iv <= current_iv)
-    percentile = round((below / len(past_ivs)) * 100, 2)
-    return percentile
+    return round((below / len(past_ivs)) * 100, 2)
 
-def classify_iv_regime(iv_percentile):
-    if iv_percentile is None:
+def classify_iv_regime(p):
+    if p is None:
         return "NA"
-    if iv_percentile >= 95:
+    if p >= 95:
         return "PANIC"
-    if iv_percentile >= 80:
+    if p >= 80:
         return "EXPANSION"
-    if iv_percentile >= 50:
+    if p >= 50:
         return "NORMAL_HIGH"
-    if iv_percentile >= 20:
+    if p >= 20:
         return "NORMAL_LOW"
     return "COMPRESSION"
 
-# ---------------- CSV WRITE (REPLACE MODE) ----------------
+# ---------- CSV WRITE (REPLACE MODE) ----------
 
 def append_row_to_csv_text(csv_text, new_row):
     input_io = io.StringIO(csv_text.strip())
