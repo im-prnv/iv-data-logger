@@ -36,6 +36,7 @@ def health():
 def process_option_chain():
     try:
         data = request.get_json()
+        preview_only = data.get("preview_only", False)
 
         symbol = data["symbol"].upper()
         date = data["date"]
@@ -53,11 +54,8 @@ def process_option_chain():
         pe_iv = iv_row["pe_iv"]
         avg_iv = round((ce_iv + pe_iv) / 2, 2)
 
-        # -------- Load past IVs --------
         csv_path = f"data/{SYMBOL_FILE_MAP[symbol]}"
-        csv_text, sha = get_csv_from_github(
-            GITHUB_REPO, csv_path, GITHUB_TOKEN
-        )
+        csv_text, sha = get_csv_from_github(GITHUB_REPO, csv_path, GITHUB_TOKEN)
 
         past_ivs = []
         reader = csv.DictReader(io.StringIO(csv_text))
@@ -70,37 +68,40 @@ def process_option_chain():
         iv_percentile = calculate_iv_percentile(past_ivs[-30:], avg_iv)
         iv_regime = classify_iv_regime(iv_percentile)
 
+        response_data = {
+            "date": date,
+            "symbol": symbol,
+            "spot": spot,
+            "theoretical_atm": atm,
+            "used_strike": iv_row["strike"],
+            "ce_iv": ce_iv,
+            "pe_iv": pe_iv,
+            "avg_iv": avg_iv,
+            "ce_oi": iv_row["ce_oi"],
+            "pe_oi": iv_row["pe_oi"],
+            "iv_percentile": iv_percentile,
+            "iv_regime": iv_regime
+        }
+
+        if preview_only:
+            return jsonify({"status": "preview", "data": response_data})
+
         row = [
-            date,
-            symbol,
-            spot,
-            iv_row["strike"],
-            ce_iv,
-            pe_iv,
-            avg_iv,
-            iv_row["ce_oi"],
-            iv_row["pe_oi"],
-            iv_percentile,
-            iv_regime
+            date, symbol, spot, iv_row["strike"],
+            ce_iv, pe_iv, avg_iv,
+            iv_row["ce_oi"], iv_row["pe_oi"],
+            iv_percentile, iv_regime
         ]
 
         updated_csv = append_row_to_csv_text(csv_text, row)
 
         commit_csv_to_github(
-            GITHUB_REPO,
-            csv_path,
-            GITHUB_TOKEN,
-            updated_csv,
-            sha,
+            GITHUB_REPO, csv_path, GITHUB_TOKEN,
+            updated_csv, sha,
             f"IV update {symbol} {date}"
         )
 
-        return jsonify({
-            "status": "success",
-            "avg_iv": avg_iv,
-            "iv_percentile": iv_percentile,
-            "iv_regime": iv_regime
-        })
+        return jsonify({"status": "success"})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"status": "error", "message": str(e)}), 500
