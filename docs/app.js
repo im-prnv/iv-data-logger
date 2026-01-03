@@ -7,30 +7,46 @@ const HEALTH_URL = `${BACKEND_BASE}/health`;
 const PROCESS_URL = `${BACKEND_BASE}/process-option-chain`;
 
 let previewPayload = null;
+let backendAwake = false;
 
 /* =========================================================
-   BACKEND STATUS
+   BACKEND STATUS (ROBUST WAKE-UP LOOP)
 ========================================================= */
 
 const backendEl = document.getElementById("backendStatus");
 
-async function checkBackend() {
+async function wakeBackend() {
+  if (backendAwake) return;
+
   try {
-    backendEl.textContent = "Backend: Waking";
+    backendEl.textContent = "Backend: Waking…";
     backendEl.className = "status-wake";
 
-    const r = await fetch(HEALTH_URL, { cache: "no-store" });
+    const controller = new AbortController();
+    setTimeout(() => controller.abort(), 10000); // 10s timeout
+
+    const r = await fetch(HEALTH_URL, {
+      cache: "no-store",
+      signal: controller.signal
+    });
+
     if (r.ok) {
+      backendAwake = true;
       backendEl.textContent = "Backend: Active";
       backendEl.className = "status-live";
+      return;
     }
   } catch (e) {
-    backendEl.textContent = "Backend: Sleeping";
-    backendEl.className = "status-sleep";
+    // ignore, will retry
   }
+
+  backendEl.textContent = "Backend: Sleeping";
+  backendEl.className = "status-sleep";
 }
 
-window.addEventListener("load", checkBackend);
+// keep trying every 5 seconds until awake
+setInterval(wakeBackend, 5000);
+window.addEventListener("load", wakeBackend);
 
 /* =========================================================
    STATUS MESSAGE (AUTO HIDE)
@@ -47,7 +63,7 @@ function showStatus(message, success = true) {
 }
 
 /* =========================================================
-   CSV PARSING (NSE ED – FINAL MAPPING)
+   CSV PARSING (NSE ED – FINAL)
 ========================================================= */
 
 function parseNSEOptionChain(rows) {
@@ -60,11 +76,10 @@ function parseNSEOptionChain(rows) {
   );
 
   if (strikeIndex === -1) {
-    console.error("STRIKE column not found");
+    showStatus("STRIKE column not found", false);
     return parsed;
   }
 
-  // NSE ED fixed offsets
   const CE_OI_INDEX = strikeIndex - 10;
   const CE_IV_INDEX = strikeIndex - 7;
   const PE_IV_INDEX = strikeIndex + 7;
@@ -100,6 +115,11 @@ function parseNSEOptionChain(rows) {
 ========================================================= */
 
 function processCSV(symbol, date, spot, strikeStep, optionChain) {
+  if (!backendAwake) {
+    showStatus("Backend waking up… please wait", false);
+    return;
+  }
+
   fetch(PROCESS_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -133,7 +153,7 @@ function processCSV(symbol, date, spot, strikeStep, optionChain) {
 }
 
 /* =========================================================
-   PREVIEW TABLE
+   PREVIEW
 ========================================================= */
 
 function renderPreview(data) {
