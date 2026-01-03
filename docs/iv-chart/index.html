@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>IV vs HV</title>
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <link rel="stylesheet" href="style.css" />
+  <script src="chart.js" defer></script>
+</head>
+
+<body>
+
+  <div class="container">
+    <h1>IV vs HV</h1>
+    <p class="subtitle">Implied Volatility vs Historical Volatility</p>
+
+    <select id="symbolSelect">
+      <option value="NIFTY">NIFTY</option>
+      <option value="BANKNIFTY">BANKNIFTY</option>
+    </select>
+
+    <canvas id="ivChart"></canvas>
+  </div>
+
+</body>
+</html>
