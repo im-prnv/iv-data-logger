@@ -1,133 +1,23 @@
 const BACKEND_BASE = "https://iv-data-logger.onrender.com";
-const HEALTH_URL = `${BACKEND_BASE}/health`;
 const PROCESS_URL = `${BACKEND_BASE}/process-option-chain`;
 
-const statusEl = document.getElementById("serverStatus");
-const processBtn = document.getElementById("processBtn");
+let previewPayload = null;
 
-let serverActive = false;
+// ---------- STATUS MESSAGE ----------
 
-// ---------------- SERVER STATUS ----------------
+function showStatus(msg, success = true) {
+    const el = document.getElementById("status");
+    el.innerText = msg;
+    el.style.color = success ? "green" : "red";
 
-function setStatus(text, cls) {
-    statusEl.innerText = text;
-    statusEl.className = `status ${cls}`;
+    setTimeout(() => {
+        el.innerText = "";
+    }, 3000);
 }
 
-async function checkServer() {
-    try {
-        const r = await fetch(HEALTH_URL, { cache: "no-store" });
-        if (r.ok) {
-            serverActive = true;
-            setStatus("Active", "active");
-            processBtn.disabled = false;
-            return;
-        }
-    } catch {}
-    setStatus("Waking up…", "waking");
-}
+// ---------- PROCESS CSV ----------
 
-function startServerWatcher() {
-    setStatus("Sleeping", "sleeping");
-    const t = setInterval(async () => {
-        await checkServer();
-        if (serverActive) clearInterval(t);
-    }, 5000);
-}
-
-window.onload = startServerWatcher;
-
-// ---------------- MAIN ----------------
-
-function processCSV() {
-    if (!serverActive) {
-        alert("Backend waking up. Please wait.");
-        return;
-    }
-
-    const file = document.getElementById("csvFile").files[0];
-    const symbol = document.getElementById("symbol").value;
-    const date = document.getElementById("date").value;
-    const spot = Number(document.getElementById("spot").value);
-
-    if (!file || !date || !spot) {
-        alert("Fill all fields");
-        return;
-    }
-
-    const strikeStep = symbol === "BANKNIFTY" ? 100 : 50;
-
-    Papa.parse(file, {
-        header: false,
-        skipEmptyLines: true,
-        complete: res => {
-            const parsed = parseNSEOptionChain(res.data);
-            console.log("OPTION CHAIN LENGTH:", parsed.length);
-            console.log("SAMPLE ROW:", parsed[0]);
-            sendToBackend(symbol, date, spot, strikeStep, parsed);
-        }
-    });
-}
-
-// ---------------- NSE OPTION CHAIN PARSER (CORRECT & FINAL) ----------------
-
-function parseNSEOptionChain(rows) {
-    const parsed = [];
-    if (!rows || rows.length < 3) return parsed;
-
-    // Header row (row index 1) contains STRIKE
-    const headerRow = rows[1];
-    const strikeIndex = headerRow.findIndex(
-        h => String(h).trim().toUpperCase() === "STRIKE"
-    );
-
-    if (strikeIndex === -1) {
-        console.error("STRIKE column not found");
-        return parsed;
-    }
-
-    // Offsets relative to STRIKE (NSE ED standard)
-    const CE_OI_INDEX = strikeIndex - 10;
-    const CE_IV_INDEX = strikeIndex - 7;
-
-    const PE_IV_INDEX = strikeIndex + 7;
-    const PE_OI_INDEX = strikeIndex + 10;
-
-    for (let i = 2; i < rows.length; i++) {
-        const row = rows[i];
-        if (!row || row.length <= PE_OI_INDEX) continue;
-
-        const strike = Number(
-            String(row[strikeIndex]).replace(/,/g, "")
-        );
-        if (isNaN(strike)) continue;
-
-        const ce_iv = Number(row[CE_IV_INDEX]);
-        const pe_iv = Number(row[PE_IV_INDEX]);
-
-        const ce_oi = Number(
-            String(row[CE_OI_INDEX] || "").replace(/,/g, "")
-        ) || 0;
-
-        const pe_oi = Number(
-            String(row[PE_OI_INDEX] || "").replace(/,/g, "")
-        ) || 0;
-
-        parsed.push({
-            strike,
-            ce_iv: isNaN(ce_iv) ? null : ce_iv,
-            pe_iv: isNaN(pe_iv) ? null : pe_iv,
-            ce_oi,
-            pe_oi
-        });
-    }
-
-    return parsed;
-}
-
-// ---------------- BACKEND ----------------
-
-function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
+function processCSV(symbol, date, spot, strikeStep, optionChain) {
     fetch(PROCESS_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -136,16 +26,56 @@ function sendToBackend(symbol, date, spot, strikeStep, optionChain) {
             date,
             spot,
             strike_step: strikeStep,
-            option_chain: optionChain
+            option_chain: optionChain,
+            preview_only: true
         })
     })
     .then(r => r.json())
     .then(d => {
-        console.log("BACKEND:", d);
-        document.getElementById("status").innerText =
-            d.status === "success"
-                ? "✅ Saved successfully"
-                : "❌ " + d.error;
+        if (d.status !== "preview") {
+            showStatus("Preview failed", false);
+            return;
+        }
+
+        previewPayload = { symbol, date, spot, strike_step: strikeStep, option_chain: optionChain };
+        renderPreview(d.data);
+    });
+}
+
+// ---------- RENDER PREVIEW ----------
+
+function renderPreview(data) {
+    const table = document.getElementById("previewTable");
+    table.innerHTML = "";
+
+    Object.entries(data).forEach(([k, v]) => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `<td><b>${k}</b></td><td>${v}</td>`;
+        table.appendChild(tr);
+    });
+
+    document.getElementById("previewSection").style.display = "block";
+}
+
+// ---------- CONFIRM SAVE ----------
+
+function confirmSave() {
+    fetch(PROCESS_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            ...previewPayload,
+            preview_only: false
+        })
     })
-    .catch(e => console.error(e));
+    .then(r => r.json())
+    .then(d => {
+        if (d.status === "success") {
+            showStatus("✅ Data saved to GitHub");
+        } else {
+            showStatus("❌ Save failed", false);
+        }
+        document.getElementById("previewSection").style.display = "none";
+        previewPayload = null;
+    });
 }
