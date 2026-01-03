@@ -1,16 +1,19 @@
 const BASE_RAW_URL =
-  "https://raw.githubusercontent.com/YOUR_USERNAME/YOUR_REPO/main/data/";
+  "https://raw.githubusercontent.com/im-prnv/iv-data-logger/main/data/";
 
 const chartCtx = document.getElementById("ivChart").getContext("2d");
 let chartInstance = null;
 
-document.getElementById("symbolSelect").addEventListener("change", loadData);
+document
+  .getElementById("symbolSelect")
+  .addEventListener("change", loadData);
 
 // initial load
 loadData();
 
 function loadData() {
   const symbol = document.getElementById("symbolSelect").value;
+
   const file =
     symbol === "BANKNIFTY"
       ? "banknifty_iv_log.csv"
@@ -21,8 +24,14 @@ function loadData() {
   Papa.parse(url, {
     download: true,
     header: true,
+    skipEmptyLines: true,
     complete: results => {
-      const rows = results.data.filter(r => r.Date);
+      if (!results.data || results.data.length === 0) {
+        console.error("No data loaded from CSV");
+        return;
+      }
+
+      const rows = results.data.filter(r => r.Date && r.AVG_IV && r.Spot);
 
       const dates = rows.map(r => r.Date);
       const iv = rows.map(r => Number(r.AVG_IV));
@@ -31,6 +40,9 @@ function loadData() {
       const hv = calculateHV(spot, 20);
 
       renderChart(dates, iv, hv);
+    },
+    error: err => {
+      console.error("CSV load error:", err);
     }
   });
 }
@@ -78,18 +90,21 @@ function renderChart(dates, iv, hv) {
           label: "Implied Volatility (IV)",
           data: iv,
           borderColor: "#38bdf8",
-          tension: 0.3,
+          borderWidth: 2,
+          tension: 0.3
         },
         {
           label: "Historical Volatility (HV)",
           data: hv,
           borderColor: "#f97316",
-          tension: 0.3,
+          borderWidth: 2,
+          tension: 0.3
         }
       ]
     },
     options: {
       responsive: true,
+      maintainAspectRatio: false,
       plugins: {
         legend: {
           labels: { color: "#e5e7eb" }
@@ -97,10 +112,12 @@ function renderChart(dates, iv, hv) {
       },
       scales: {
         x: {
-          ticks: { color: "#9ca3af" }
+          ticks: { color: "#9ca3af" },
+          grid: { color: "#1e293b" }
         },
         y: {
-          ticks: { color: "#9ca3af" }
+          ticks: { color: "#9ca3af" },
+          grid: { color: "#1e293b" }
         }
       }
     }
