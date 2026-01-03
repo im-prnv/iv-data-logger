@@ -1,0 +1,37 @@
+body {
+  margin: 0;
+  padding: 20px;
+  background: #0f172a;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  color: #e5e7eb;
+}
+
+.container {
+  max-width: 900px;
+  margin: auto;
+}
+
+h1 {
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: #9ca3af;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+select {
+  background: #020617;
+  color: #e5e7eb;
+  border: 1px solid #1e293b;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+}
+
+canvas {
+  background: #020617;
+  border-radius: 8px;
+  padding: 10px;
+}
