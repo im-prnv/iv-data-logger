@@ -1,0 +1,96 @@
+body {
+  margin: 0;
+  padding: 20px;
+  background: #0f172a;
+  font-family: system-ui, -apple-system, Segoe UI, sans-serif;
+  color: #e5e7eb;
+}
+
+.container {
+  max-width: 1000px;
+  margin: auto;
+}
+
+header h1 {
+  margin-bottom: 4px;
+}
+
+.subtitle {
+  color: #9ca3af;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+/* Controls */
+
+.controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+select, button {
+  background: #020617;
+  color: #e5e7eb;
+  border: 1px solid #1e293b;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: #38bdf8;
+}
+
+/* Table */
+
+.table-wrapper {
+  overflow-x: auto;
+  background: #020617;
+  border-radius: 8px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+thead {
+  background: #020617;
+  position: sticky;
+  top: 0;
+}
+
+th, td {
+  padding: 8px 10px;
+  border-bottom: 1px solid #1e293b;
+  white-space: nowrap;
+}
+
+th {
+  color: #93c5fd;
+  font-weight: 600;
+}
+
+tbody tr:hover {
+  background: #020617;
+}
+
+/* Status */
+
+.status {
+  margin-top: 12px;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  body {
+    padding: 14px;
+  }
+}
