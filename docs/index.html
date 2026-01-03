@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IV Data Logger</title>
 
   <!-- PapaParse -->
@@ -25,11 +26,10 @@
 
     <header>
       <h1>IV Data Logger</h1>
-      <p class="subtitle">Clean volatility data · Preview before save</p>
+      <p class="subtitle">Volatility intelligence · Preview before save</p>
     </header>
 
-    <!-- ================= INPUT CARD ================= -->
-
+    <!-- INPUT CARD -->
     <section class="card">
 
       <div class="form-grid">
@@ -56,7 +56,7 @@
 
       <div class="file-row">
         <input type="file" id="csvFile" accept=".csv" />
-        <button class="primary-btn" onclick="handleProcess()">
+        <button id="processBtn" class="primary-btn" disabled>
           Process & Preview
         </button>
       </div>
@@ -65,8 +65,7 @@
 
     </section>
 
-    <!-- ================= PREVIEW CARD ================= -->
-
+    <!-- PREVIEW CARD -->
     <section id="previewSection" class="card preview-card" style="display:none;">
 
       <div class="preview-header">
@@ -80,7 +79,7 @@
 
       <div class="preview-actions">
         <button class="confirm-btn" onclick="confirmSave()">
-          ✅ Confirm & Save
+          Confirm & Save
         </button>
       </div>
 
