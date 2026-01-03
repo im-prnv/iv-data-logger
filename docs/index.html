@@ -19,30 +19,48 @@
     }
 
     h2 {
-      margin-bottom: 10px;
+      margin-bottom: 20px;
     }
 
     label {
       display: block;
-      margin-top: 10px;
+      margin-top: 15px;
       font-weight: bold;
     }
 
-    input, select, button {
+    input, select {
       padding: 6px;
-      margin-top: 4px;
+      margin-top: 6px;
       width: 100%;
       max-width: 400px;
     }
 
     button {
+      padding: 8px 14px;
       cursor: pointer;
-      margin-top: 15px;
+      font-weight: bold;
     }
 
     #status {
       margin-top: 15px;
       font-weight: bold;
+      min-height: 20px;
+    }
+
+    /* --- FILE + BUTTON ROW --- */
+    .file-row {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-top: 10px;
+    }
+
+    .file-row input[type="file"] {
+      max-width: 400px;
+    }
+
+    .file-row button {
+      white-space: nowrap;
     }
 
     table {
@@ -70,22 +88,23 @@
 
   <!-- ================= INPUT FORM ================= -->
 
-  <label>Symbol</label>
+  <label for="symbol">Symbol</label>
   <select id="symbol">
     <option value="NIFTY">NIFTY</option>
     <option value="BANKNIFTY">BANKNIFTY</option>
   </select>
 
-  <label>Date</label>
+  <label for="date">Date</label>
   <input type="date" id="date" />
 
-  <label>Spot Price</label>
+  <label for="spot">Spot Price</label>
   <input type="number" id="spot" placeholder="e.g. 26124" />
 
   <label>Option Chain CSV</label>
-  <input type="file" id="csvFile" accept=".csv" />
-
-  <button onclick="handleProcess()">Process & Preview</button>
+  <div class="file-row">
+    <input type="file" id="csvFile" accept=".csv" />
+    <button onclick="handleProcess()">Process & Preview</button>
+  </div>
 
   <div id="status"></div>
 
