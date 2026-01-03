@@ -1,43 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>IV Data Logger</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>IV Data Logger</title>
+
+  <!-- PapaParse -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+  <!-- App JS -->
+  <script src="app.js" defer></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    input, select, button {
+      padding: 6px;
+      margin-top: 4px;
+      width: 100%;
+      max-width: 400px;
+    }
+
+    button {
+      cursor: pointer;
+      margin-top: 15px;
+    }
+
+    #status {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    table {
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+
+    table td {
+      padding: 6px 10px;
+      border: 1px solid #ccc;
+    }
+
+    #previewSection {
+      margin-top: 25px;
+      padding: 15px;
+      border: 1px solid #aaa;
+      background: #f9f9f9;
+    }
+  </style>
 </head>
+
 <body>
 
-<div class="status-bar">
-    Backend Status:
-    <span id="serverStatus" class="status sleeping">Sleeping</span>
-</div>
+  <h2>IV Data Logger</h2>
 
-<div class="container">
-    <h2>IV Data Logger</h2>
+  <!-- ================= INPUT FORM ================= -->
 
-    <label>Symbol</label>
-    <select id="symbol">
-        <option value="NIFTY">NIFTY</option>
-        <option value="BANKNIFTY">BANKNIFTY</option>
-    </select>
+  <label>Symbol</label>
+  <select id="symbol">
+    <option value="NIFTY">NIFTY</option>
+    <option value="BANKNIFTY">BANKNIFTY</option>
+  </select>
 
-    <label>Date</label>
-    <input type="date" id="date">
+  <label>Date</label>
+  <input type="date" id="date" />
 
-    <label>Spot Price</label>
-    <input type="number" id="spot" placeholder="e.g. 26129">
+  <label>Spot Price</label>
+  <input type="number" id="spot" placeholder="e.g. 26124" />
 
-    <label>Option Chain CSV</label>
-    <input type="file" id="csvFile" accept=".csv">
+  <label>Option Chain CSV</label>
+  <input type="file" id="csvFile" accept=".csv" />
 
-    <button id="processBtn" onclick="processCSV()" disabled>
-        Process & Save
-    </button>
+  <button onclick="handleProcess()">Process & Preview</button>
 
-    <p id="status"></p>
-</div>
+  <div id="status"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
-<script src="app.js"></script>
+  <!-- ================= PREVIEW ================= -->
+
+  <div id="previewSection" style="display:none;">
+    <h3>IV Data Preview</h3>
+
+    <table>
+      <tbody id="previewTable"></tbody>
+    </table>
+
+    <button onclick="confirmSave()">✅ Confirm & Save to GitHub</button>
+  </div>
+
+  <!-- ================= SCRIPT GLUE ================= -->
+
+  <script>
+    function handleProcess() {
+      const fileInput = document.getElementById("csvFile");
+      const symbol = document.getElementById("symbol").value;
+      const date = document.getElementById("date").value;
+      const spot = Number(document.getElementById("spot").value);
+
+      if (!fileInput.files.length || !date || !spot) {
+        alert("Please fill all fields and upload CSV");
+        return;
+      }
+
+      const strikeStep = symbol === "BANKNIFTY" ? 100 : 50;
+
+      Papa.parse(fileInput.files[0], {
+        header: false,
+        skipEmptyLines: true,
+        complete: function (res) {
+          const optionChain = parseNSEOptionChain(res.data);
+          processCSV(symbol, date, spot, strikeStep, optionChain);
+        }
+      });
+    }
+  </script>
+
 </body>
 </html>
