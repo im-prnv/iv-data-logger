@@ -69,7 +69,11 @@ function renderTable(rows) {
   });
 }
 
-function downloadCSV() {
+/* =========================
+   FORCE CSV DOWNLOAD (FIX)
+========================= */
+
+async function downloadCSV() {
   const symbol = symbolSelect.value;
   const file =
     symbol === "BANKNIFTY"
@@ -78,10 +82,33 @@ function downloadCSV() {
 
   const url = BASE_RAW_URL + file;
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = file;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  try {
+    statusEl.textContent = "Preparing download...";
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      statusEl.textContent = "Download failed";
+      return;
+    }
+
+    const csvText = await response.text();
+
+    const blob = new Blob([csvText], { type: "text/csv" });
+    const blobUrl = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = blobUrl;
+    a.download = file;
+
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+
+    statusEl.textContent = "CSV downloaded";
+  } catch (err) {
+    console.error(err);
+    statusEl.textContent = "Download failed";
+  }
 }
