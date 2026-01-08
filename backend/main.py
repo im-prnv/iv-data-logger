@@ -34,13 +34,19 @@ def ttl_cache(ttl_seconds: int):
 
 
 app = FastAPI()
-        @app.get("/")
+       @app.get("/")
 def root():
     return {
         "status": "Backend running",
         "service": "iv-data-logger",
         "version": "1.0"
     }
+
+# ---------------- SAMPLE ENDPOINT ----------------
+
+@app.get("/health")
+def health():
+    return {"ok": True}
 
 
 # ---------------- CORS ----------------
@@ -77,11 +83,6 @@ def fetch_1d_change(symbols):
             continue
 
     return None, None
-
-# ---------------- HEALTH ----------------
-#@app.get("/")
-#def health():
-    #return {"status": "Backend running"}
 
 # ---------------- MACRO ----------------
 @app.get("/dxy")
