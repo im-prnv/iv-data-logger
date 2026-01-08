@@ -34,11 +34,21 @@ def ttl_cache(ttl_seconds: int):
 
 
 app = FastAPI()
+        @app.get("/")
+def root():
+    return {
+        "status": "Backend running",
+        "service": "iv-data-logger",
+        "version": "1.0"
+    }
+
 
 # ---------------- CORS ----------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://im-prnv.github.io"],
+    allow_origins=["https://im-prnv.github.io",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -69,9 +79,9 @@ def fetch_1d_change(symbols):
     return None, None
 
 # ---------------- HEALTH ----------------
-@app.get("/")
-def health():
-    return {"status": "Backend running"}
+#@app.get("/")
+#def health():
+    #return {"status": "Backend running"}
 
 # ---------------- MACRO ----------------
 @app.get("/dxy")
